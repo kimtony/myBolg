@@ -1,0 +1,97 @@
+import requests
+from bs4 import BeautifulSoup
+import random
+import json
+import xlwt
+
+name = []  # 名称
+price = []  # 价格
+href = []  # 详情链接
+salesvolume = []  # 销量
+comment = []  #评论
+goodcomment = []  # 好评
+mediumcomment = []  # 中评
+badcomment = []  # 差评
+
+res = requests.get('https://www.baidu.com/')
+res.encoding = 'utf-8'
+
+def getCommodity():
+    url = 'http://search.dangdang.com/?key=%BF%D5%C6%F8%BE%BB%BB%AF%C6%F7&act=input&page_index={}'
+    print('数据正在爬取中，请耐心等待。。。')
+    for i in range(37):
+        url = url.format(i + 1)
+        getCommodityByPage(url)
+        print((i + 1), '/37')
+    print('数据爬取完成，正在保存。。。')
+    savaData()
+
+def getCommodityByPage(url):
+    res = requests.get(url)
+    soup = BeautifulSoup(res.text, 'html.parser')
+    for li in soup.select('#component_0__0__8609 li'):
+        name.append(li.select('.name')[0].text)
+        price.append((li.select('.price')[0].text)[2:])
+        href.append(li.select('a')[0]['href'])
+        salesvolume.append(random.randint(0, 10000))
+        getComment(li.select('a')[0]['href'])
+
+def getComment(url):
+    warecomment = []
+    url = url.split('/')
+    num = url[3].rstrip('.html')
+    ip = '{}.{}.{}'.format(random.randint(10, 99), random.randint(10, 99), random.randint(10, 99))
+    url = 'http://product.dangdang.com/index.php?r=comment%2Flist&productId={}&categoryPath={}.00.00.00&mainProductId={}&mediumId=0&pageIndex=1&sortType=1&filterType=1&isSystem=1&tagId=0&tagFilterCount=0&template=publish'
+    url = url.format(num, ip, num)
+    try:
+        res = requests.get(url)
+        jsonobj = json.loads(res.text)
+        goodcomment.append(jsonobj['data']['list']['summary']['total_crazy_count'])
+        mediumcomment.append(jsonobj['data']['list']['summary']['total_indifferent_count'])
+        badcomment.append(jsonobj['data']['list']['summary']['total_detest_count'])
+        pageCount = jsonobj['data']['list']['summary']['pageCount']
+        pageCount = int(pageCount)
+        for i in range(pageCount):
+            url = 'http://product.dangdang.com/index.php?r=comment%2Flist&productId={}&categoryPath={}.00.00.00&mainProductId={}&mediumId=0&pageIndex={}&sortType=1&filterType=1&isSystem=1&tagId=0&tagFilterCount=0&template=publish'
+            url = url.format(num, ip, num, i + 1)
+            res = requests.get(url)
+            jsonobj = json.loads(res.text)
+            soup = BeautifulSoup(jsonobj['data']['list']['html'], 'html.parser')
+            for j in soup.select('.comment_items .describe_detail span'):
+                warecomment.append(j.text)
+    except:
+        goodcomment.append(0)
+        mediumcomment.append(0)
+        badcomment.append(0)
+        warecomment.append('')
+    comment.append(warecomment)
+
+def savaData():
+    workbook = xlwt.Workbook()
+    sheet1 = workbook.add_sheet('xlwt', cell_overwrite_ok=True)
+    style = xlwt.XFStyle()
+    font = xlwt.Font()
+    font.name = 'Times New Roman'
+    font.bold = True
+    style.font = font
+
+    goodcomment.append("1")
+    mediumcomment.append("1")
+    badcomment.append("1")
+
+    name_list = ['name', 'price', 'href', 'salesvolume', 'comment', 'goodcomment', 'mediumcomment', 'badcomment']
+    for cc in range(0, len(name_list)):
+        sheet1.write(0, cc, name_list[cc], style)
+    for i in range(0, len(name)):
+        sheet1.write(i + 1, 0, name[i], style)
+        sheet1.write(i + 1, 1, price[i], style)
+        sheet1.write(i + 1, 2, href[i], style)
+        sheet1.write(i + 1, 3, salesvolume[i], style)
+        sheet1.write(i + 1, 4, comment[i], style)
+        sheet1.write(i + 1, 5, goodcomment[i], style)
+        sheet1.write(i + 1, 6, mediumcomment[i], style)
+        sheet1.write(i + 1, 7, badcomment[i], style)
+    workbook.save(r'D:\test.xls')
+    print('数据保存完成！')
+
+getCommodity()
