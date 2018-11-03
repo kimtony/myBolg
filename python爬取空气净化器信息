@@ -1,9 +1,12 @@
+#导入所需要的库
 import requests
 from bs4 import BeautifulSoup
 import random
 import json
 import xlwt
 
+
+#将抓取的数据存进list里面
 name = []  # 名称
 price = []  # 价格
 href = []  # 详情链接
@@ -13,29 +16,39 @@ goodcomment = []  # 好评
 mediumcomment = []  # 中评
 badcomment = []  # 差评
 
+#在请求头内将自己伪装成浏览器,否则百度不会正常返回页面内容 
 res = requests.get('https://www.baidu.com/')
 res.encoding = 'utf-8'
 
+
+#定义一个getCommodity函数抓取url
 def getCommodity():
+    #获取爬取的url然后修改一下参数数据
     url = 'http://search.dangdang.com/?key=%BF%D5%C6%F8%BE%BB%BB%AF%C6%F7&act=input&page_index={}'
     print('数据正在爬取中，请耐心等待。。。')
+    #循环page页面
     for i in range(37):
+        #将一个解析后的URL对象、转成、一个格式化的URL字符串。
         url = url.format(i + 1)
         getCommodityByPage(url)
         print((i + 1), '/37')
     print('数据爬取完成，正在保存。。。')
     savaData()
 
+#定义一个函数获取页面的url获取之后事实上就是个字符串类型的数据，可以用BeautifulSoup装换成一个html类型的文本，这样就可以像css选择器那样用.类名获取到那个元素了。
+#获取到元素之后你想获取他的文字啊，链接那些都是可以做到的了。
 def getCommodityByPage(url):
     res = requests.get(url)
     soup = BeautifulSoup(res.text, 'html.parser')
     for li in soup.select('#component_0__0__8609 li'):
+        #append() 方法向列表的尾部添加一个新的元素。
         name.append(li.select('.name')[0].text)
         price.append((li.select('.price')[0].text)[2:])
         href.append(li.select('a')[0]['href'])
         salesvolume.append(random.randint(0, 10000))
         getComment(li.select('a')[0]['href'])
 
+#获取评论并格式化存储
 def getComment(url):
     warecomment = []
     url = url.split('/')
@@ -66,14 +79,15 @@ def getComment(url):
         warecomment.append('')
     comment.append(warecomment)
 
+#用xlwt来操作excel
 def savaData():
     workbook = xlwt.Workbook()
     sheet1 = workbook.add_sheet('xlwt', cell_overwrite_ok=True)
-    style = xlwt.XFStyle()
-    font = xlwt.Font()
+    style = xlwt.XFStyle() # 初始化样式
+    font = xlwt.Font() # 为样式创建字体
     font.name = 'Times New Roman'
-    font.bold = True
-    style.font = font
+    font.bold = True # 黑体
+    style.font = font # 设定样式
 
     goodcomment.append("1")
     mediumcomment.append("1")
