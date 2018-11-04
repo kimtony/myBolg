@@ -1,2 +1,2 @@
-# myBolg
-写写笔记
+# python
+python知识点，代码，报错，项目
