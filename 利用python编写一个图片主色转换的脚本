@@ -1,0 +1,74 @@
+本文就编写了一个批量替换图片主色的脚本changeImageColor.py。
+实现思路
+      1.pip 安装Pillow库引入Image类
+      2.在当前目录下创建存放转换后图片目录
+      3.获取当前目录路径，以及图片文件
+      4.遍历所有图片文件并创建对应Image对象
+      5.获取Image对象背景颜色rgba值
+      6.遍历Image对象所有像素点
+      7.把不是背景像素点颜色替换为要转换输入颜色值
+      8.保存Image对象到新目录下面
+
+from PIL import Image
+import os
+class ChangeImageColor(object):
+  @classmethod
+  def startHandle(self, rgb):
+    # 获取当前路径，并创建新目录用于输出结果image
+    path = os.getcwd() + '/images/res'
+    npath = os.getcwd() + '/images/res/result/'
+    if not os.path.exists(npath):
+      os.makedirs(npath)
+    else:
+      # 如果存在相同新目录那么删除下面文件
+      for root, dirs, files in os.walk(npath):
+        for file_name in files:
+          os.remove(npath + file_name)    
+    # 新颜色值
+    nr,ng,nb = rgb
+    # 存放背景颜色
+    br,bg,bb, ba = 0, 0, 0, 0
+    # 遍历目录
+    for root, dirs, files in os.walk(path):
+      print('root: ', root) # 当前目录路径
+      print('dirs: ', dirs) # 当前路径下所有子目录
+      print('files: ', files) # 当前路径下所有非目录子文件      
+      # 遍历下所有图片文件
+      for file_name in files:
+        if file_name != '.DS_Store':
+          image = Image.open(root + '/' + file_name)
+          if image is not None:
+            image_width, image_height = image.size
+            # 遍历Image每个像素
+            for i in range(image_width):
+              for j in range(image_height):
+                xy = (i,j)
+                # 下面是获取像素和比较像素
+                color = image.getpixel(xy)
+                color_num = len(color)
+                # 判断颜色是否有alpha值
+                if color_num == 4:
+                  r, g, b, a = color
+                  if i == 0 and j == 0:
+                    br, bg, bb, ba = color
+                  if br != r or bg != g or bb != b:
+                    # 替换像素并保留alpha值
+                    image.putpixel(xy, (nr, ng, nb,a))
+                elif color_num == 3:
+                  r, g, b = color
+                  if i == 0 and j == 0:
+                    br, bg, bb = color
+                  if br != r or bg != g or bb != b:                    image.putpixel(xy, (nr, ng, nb))
+ 
+            image.save(npath + file_name)
+  # 把16进制转换为rgb
+  @classmethod
+  def hex2rgb(self, hexcolor):
+    rgb = ((hexcolor >> 16) & 0xff,
+        (hexcolor >> 8) & 0xff,
+        hexcolor & 0xff
+        )
+    return rgb
+if __name__ == '__main__':
+  hexColor = int(input('请输入新16进制颜色值:'), 16)
+  ChangeImageColor.startHandle(ChangeImageColor.hex2rgb(hexColor))
