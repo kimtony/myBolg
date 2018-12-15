@@ -1,0 +1,303 @@
+爬虫包括至少三个模块:requests,re,BeautifulSoup
+  1. requests小甲鱼版
+      a. 发送请求
+          i. get:requests.get(url)
+          ii. post:requests.post(url,data),data = {key:value}
+          iii. put:requests.put(url,data)
+
+          iv. delete:requests.delete(url)
+          v. head:requests.head(url)
+          vi. options:requests.options
+      b. 传递URL参数
+          i. URL中经常有查询字符串,用它来请求数据.他可以赋予params参数,并是字典.如payload = {key1:value1,key2:value2},r = requests.get(url,params = payload).值还可以通过列表传入,如payload = {key1:[value1,value2]}.
+      c. 响应内容
+          i. 在获得响应内容时,Request会自动解码,其原理是根据返回网页的头部判断其编码方式,并用对应的格式解码.
+          ii. r.encoding可以查看Request才用了哪种解码方式.同时也可以设置解码方式,设置后每当访问r.text,都将用新方式解码.
+      d. 二进制响应内容
+          i. 对于非文本的响应内容,可以才用r.content方式获得,比如图片.
+      e. Json响应内容
+          i. 当响应内容是Json时,可以用r.json()
+          ii. 响应失败:
+              1. 无内容:204
+              2. 无效json数据:ValueError
+          iii. 查看响应是否成功:r.status_code()或r.raise_for_status()
+      f. 原始响应内容
+          i. 少数情况下回想获得来自服务器的原始套接字响应信息.
+          ii. 保证stream = True,如r = requests.get(url,stream = True),再用r.raw获取原始套接字.
+          iii. r.raw.read(10)
+      g. 自定义请求头(headers)
+          i. 传递一个字典给headers,并写入请求的参数里.如headers = {'key1':'value1'},r = requests.get(url,headers = headers)
+          ii. 定制headers优先级有时低于一些信息源:
+              1. .netrc里设定了用户认证信息,headers便会失效.而设置了auth = 参数,.netrc会失效.
+              2. 如果重定向到其他主机,headers授权就会被删除.
+              3. headers代理授权会被URL提供的代理身份覆盖掉.
+              4. 在我们能判断内容长度的情况下,headers的Content_Lenth会被改写.
+      h. 更复杂的POST求情.
+          i. 我们通常发送一些表单数据给服务端,表单数据就是一对多的数据,这时把需要提交的表单数据写成字典形式,赋予data参数就可以了.payload = {'key1':'value1','key2':'value2'},r = requests.post(url,data = payload)
+          ii. data参数还可以是元祖对的形式,如payload = ((key1,value1),(key1,value2)).
+          iii. 如果所传数据不是表单形式,则会直接传过去,也可以传json格式的内容.
+      i. POST多部分编码的文件
+          i. 暂时略过,可以以文件为参数传给服务器.
+      j. 响应状态码
+          i. r.status_code
+          ii. 为方便应用,Request自带一个内置的状态码查询对象.r.requests.status_code = requests.codes.ok --> True
+          iii. 如果r.status_code返回的是4XX:客户端错误或5XX:服务器端错误.则可以使用r.raise_for_status抛出一个异常.
+      k. 响应头
+          i. r.headers,他是一个字典,名字不区分大小写,如r.headers['content-type']==r.headers['Content-Type']
+      l. Cookies
+          i. 如果返回的响应里有cookie,可以快速的访问他.如r.cookies['example_cookie_name']
+          ii. 如果自己想发送cookies给服务器,可以通过cookies参数实现.cookies = {'key':'value'},r.get(url,cookies = cookies)
+          iii. 返回的cookie是RequestsCookieJar()对象,你可以把cookiejar对象传递到Request对象中去.jar = requests.cookies.RequestsCookieJar(),jar.set(...),r = requests.get(url,cookies = jar)
+      m. 重定向和历史
+          i. 暂未遇到这个问题
+      n. 超时
+          i. timeout = 5参数是限制请求响应时间的,如果服务器在timeout限制的时间里没有响应请求则会引发一个异常.理论上所有请求都要有timeout,因为默认情况下是一直等待,直到有响应.timeout不是下载响应体的时间,而是等待请求响应的时间.
+      o. 错误与异常
+          i. 遇到网络问题--Request--ConnectionError异常
+          ii. 状态码错误--Requests.raise_for_status--HTTPError异常
+          iii. 请求超时--Timeout异常
+          iv. 请求超过了最大重定向次数--TooManyRedirects异常
+          v. 所有异常继承于requests.exceptions.RequestException.
+
+  2. BeautifulSoup小甲鱼版
+      a. 作用:
+          i. 用于向HTML或XML文档提取数据.对文档进行遍历/查找/修改.
+      b. 对象的种类
+          i. 解析一个文档,只需要把它传给BeautifulSoup方法,可以是字符串可以是文档,文档首先会被转化为Unicode字符
+          ii. 解析时默认用HTML解析器,可以指定XML解析器.soup = BeautifulSoup(markup,'xml')
+          iii. BeautifulSoup把HTML文档转化为树形结构,每个节点都是对象,对象可以分为4种:tag,navigableString,BeautifulSoup,comment.
+          iv. Tag --> 是HTML中的一个节点对象,soup = BeautifulSoup(html),tag = soup.p,soup.a
+              1. name:
+                  a. tag有name属性,tag.name --> 'p'
+                  b. 一个soup里,某个tag的name被改变了.如tag.name = hahaha,则其他的所有同名tag的那么都变了
+              2. 属性tag的属性和字典一样应用和增删查改.
+                  a. tag['class']可以看出class属性的值
+                  b. tag.attrs可以看某个tag的字典
+                  c. 多值属性  -->  指一个属性有多个值
+                      i. class一般是多值属性,id一般不是
+                      ii. 如果一个值不是多值属性,则在访问他的时候,返回的是一个字符串的列表
+                      iii. 如果一个值是多值属性,访问他的时候返回的是列表,里面有多个子字符串
+                      iv. 多值属性返回成字符串后是连在一起的.
+                      v. 多值属性可以增删查改.
+                      vi. 可以用get_attribute_list来获得tag属性的值,soup.p.get_attribute_list('id').
+                  d. 如果是XML方式解析,则没有多值属性.
+          v. NavigableString
+              1. soup = BeautifulSoup(HTML),tag = soup.p,tag.string  -->  string是NavigableString格式的,可以用str()把NavigableString转化为python的unicode字符串.
+              2. tag里的字符串不可以被编辑,但是可以用replace_with方法进行替换.
+              3. 字符串和tag不一样,tag里面可以有属性,tag,但是NavigableString里面不能有其他的元素.不支持content(),find)(),string()等方法.
+              4. 如果在BeautifulSoup之外引用tring对象,记得先把他用str()方法转化为unicode,不然即使BeautifulSoup结束,由于NavigableString被引用,他的解析树的引用地址也在,这会造成大量的内存浪费.
+          vi. BeautifulSoup
+              1. 他代表整个文档
+              2. 可以把它看做最大的tag标签,可以遍历他或者搜索,但是因为不是真的tag,所以没有name和属性.
+              3. 但是包含了一个值为['document']的名字为name的属性.soup.name --> 'document'
+          vii. comment and other special string
+              1. tag,NavigableSting和BeautifulSoup已经包含了大部分对象了,除了批注.
+              2. comment其实是特殊的NavigableString类型,他在打印出来的时候和一般的NavigableString不一样
+              3. markup = '<b><--!hahaha--><\b>',soup = BeautifulSoup(markup),soup.b.string的type就是comment.
+              4. 还有其他的特殊字符类型都是NavigableString的子类,用到再补充!
+      c. 遍历文档树
+          i. 子节点(向下遍历) --> 标签tag可能有标签和字符串子节点,字符串没有子节点.
+              1. 用标签名进行遍历:
+                  a. 可以用名字向下遍历,如soup.body,再向下是soup.body.b等.
+                  b. 用名字遍历的方法只能获得第一个子节点,如果要获得所有子节点,需要使用find_all,all_a = soup.find_all('a')
+              2. 用contents和children
+                  a. .contents可以获得一个节点的子节点,并返回一个列表,可以通过访问列表提取出子节点,soup.b.contents
+                  b. string对象没有contents方法,beautifulsoup本身的子节点是html
+                  c. 可以使用children返回一个子节点的迭代对象,用for循环迭代取出子节点
+              3. descendants --> 是取出孙节点的方法
+                  a. descendants返回一个子孙节点的可迭代对象,可以使用for循环取出所有子孙节点:for child in soup.b.descendants: print(child)!
+                  b. html标签可以只有一个子节点,可以却可以有许多子孙节点.
+              4. .string
+                  a. 如果一个标签的子节点是string对象,用.string可以访问string的内容.
+                  b. 如果一个标签的唯一子节点是另一个标签,且那个标签的子节点是string,name可以使用.string访问子孙节点的string内容
+                  c. 如果一个标签有多个子节点,那么用.string方法就不知道返回哪一个字符串了,这时候.string返回None.
+                  d. 如果一个标签有多个子节点,而我们又想获得多个子节点的字符串,这时候采用.string方法捕获可以获得字符串的迭代对象!for string in soup.strings:print(string),如果迭代对象里有太多空格或换行,则使用stripped_strings方法可以返回没有多余空白的字符串迭代对象.
+          ii. 父节点(向上遍历)
+              1. .parent
+                  a. 可以访问节点的父节点,html的父节点是BeautifulSoup,BeautifulSoup的父节点是None
+                  b. 父节点返回的是整个父节点的节点对象
+              2. .parents
+                  a. 你可以用.parents返回一个所有父节点的的迭代对象,并可以用for循环迭代取出所有父节点.
+          iii. 兄弟节点(左右遍历)
+              1. 向右遍历,next_sibling.向左遍历,previous_sibling.
+              2. 一个节点没有左节点的时候向左遍历便会返回None,右边同理.
+              3. 更多时候左右遍历会返回一个空格,比如前后两行代码中间有换行.
+          iv. 回退和前进
+              1. 回退和前进指BeautifulSoup在编译的时候按照一个个代码对HTML从前到后逐个进行编译,而BeautifulSoup可以重现编译过程.
+              2. next_element和previous_element代表前进和回退,<a>余帆</a>,<a>标签前进的时候,返回值是余帆,这和next_sibling有区别.
+              3. next_elements和previous_elements可以返回所有前进和回退的迭代对象,可以使用for循环把迭代对象取出来.
+      d. 搜索文档树 --> 注重介绍find()和find_all(),其他的简要介绍
+          i. 几种过滤器 --> 可以用在查找名字,属性,字符串上.
+              1. 字符串
+                  a. 简单的过滤器,可以查找字符串对应的相关标签,如soup.find_all('b'),找出所有b标签.
+              2. 用正则表达式作为过滤器,会采用正则表达式的match()方法来匹配内容.
+                  a. soup.find(re.compile('^b'))表示找到所有以b开头的标签,如b,body.
+                  b. soup.find(re.compile('t'))表示找到所有包含t的标签,如title,html
+              3. 列表
+                  a. 找出所有列表元素对应的标签,如soup.find_all(['a','b']),代表找到所有a和b标签.
+              4. True
+                  a. 表示匹配所有标签,除了字符串节,soup.find_all(True)
+              5. 函数 --> 一般用于定制过滤条件,找出能让函数返回True的所有元素.
+                  a. 如定制有class没id的标签,def has_class_no_id(tag):return tag.has_attr('class') and not tag.has_attr('id'),soup.find_all(has_class_no_id) --> 找出所有的.
+          ii. find_all() --> find_all(name,attrs,recursive,string,limit,**kwargs)
+              1. name参数
+                  a. 用name查找对应标签,如 soup.find_all('a'),即找到标签名为a的标签
+                  b. 那么可以用过滤器表示,可以用字符串,正则表达式,列表,函数,True
+              2. keyword参数
+                  a. 如果需要查找的参数是(name,attrs,recursive,string,limit,**kwargs)以外的\参数,可以使用keyword
+                  b. 如soup.ind_all(id = 'key1'),soup.find_all(href = re.compile('title')),keyword也可以用过滤器表示,可以多个keyword一起限制需要查找的对象的特性.
+                  c. 注意:有些名字不能随便用,比如html里的data-*,这时候把data-*作为字典,传给attrs参数即可,keyword = {data-foo:'value'},soup.find_all(attrs = keyword),同理HTML里的name参数也是如此.
+              3. 根据CSS进行搜索
+                  a. CSS类名搜索标签很好用,但CSS里的类名class在python里是保留字,所以用class_替代
+                  b. 如soup.find_all(class_ = re.compile('itl')),class_后面可以跟过滤器
+                  c. class里可以有多个值,可以只搜索class多值里的一个值定位相应的class,如css_soup = BeautifulSoup('<p class = 'body strikeout'></p>','html.parser'),css_soup.find_all(class_ = 'body'或者'strikeout'或者'body strikeout'都可以),不能用反顺序,如strikeout body.
+                  d. 如果想匹配两个上的类名,可以采用CSS选择器,css_soup.select(p.strikeout.body)
+              4. string参数
+                  a. 和name参数一样接受过滤器.
+                  b. string是严格匹配的soup.find_all(string = ['小白','小黑']) --> '小白','小黑'
+              5. limit参数
+                  a. 限制返回结果的个数
+                  b. soup.find_all('a',limit = 2),则返回2个a标签
+              6. recursive参数
+                  a. recursive是迭代的意思,默认是True,可以设置为False表示只find到响应的子节点,不迭代到底
+              7. 像find_all一样调用一个标签
+                  a. 如果把BeautifulSoup或tag对象当方法使用,那么这个和使用find_all()的效果是相同的.
+                  b. soup.find_all('a') = soup('a')
+          iii. find()方法
+              1. find()方法用于我们只想找到一个返回值的时候,效果等价于find_all('a',limit =1 ) == find('a')
+              2. find_all返回的是一个列表,find返回的是结果,查找不到适合的值的时候,find_all返回[],find返回None.
+
+  3. 正则表达式小甲鱼版 --> 用于匹配任何想匹配的格式.匹配,捕获,替换.
+      a. 正则表达式介绍
+          i. 简单的模式
+              1. 字符匹配
+                  a. 普通字符:字母和数字等和自身匹配:fishc == fishc
+                  b. 元字符:.^$\[]{}()|*+?
+                      i. []里,元字符会失去原有的效力,如[|\]$表达的就是这些字符本身,[]里可以表范围,如[a-z],[0-8],[]可以做排除,如[^s]表示除了s以外的字符都匹配.
+                      ii. \后面跟字母会有特殊用处,如\d表示整数,\后面加元字符表示去掉元字符功效,\*表示*.
+          ii. 重复的事情
+              1. 表达重复的元字符有这些
+                  a. *表示0次以上 == {0,}
+                  b. +表示1次以上 == {1,}
+                  c. ?表示0或1次  == {0,1}
+                  d. {m,n}表示m到n次,{m,}表示m到无限次,{,n}表示0到n次,{m}表示m次
+              2. 贪婪
+                  a. 如果没有特殊限制,正则表达式会向后匹配尽量多次,能匹配的都匹配上,直到出现了不合要求的地方,再倒着往前匹配,一直找到最后一个符合要求的位置.所以贪婪模式下,正则的匹配是匹配到能匹配的最后一个位置.这可能和我们写代码的时候想象的效果不一样.
+      b. 使用正则表达式
+          i. 概念
+              1. 正则表达式 --> 一些用于匹配的特殊字符表达,如\d,[da]
+              2. 模式对象 --> 用re.compile编译正则表达式后得到的对象,如 p = re.compile('[abc]+'),p就是模式对象.
+              3. 匹配对象,模式对象和字符串匹配后得到的对象.如 m = p.search('abcd'),m就是匹配对象,如果没有匹配上,返回None.
+          ii. 编译正则表达式
+              1. 用re.compile编译正则表达式import re,p = re.compile('[ac]+')
+              2. re.compile接受flag参数,如re.compile('[abc]+',re.IGNORECASE)
+          iii. 麻烦的反斜杠
+              1. 表达'\store'这个字符的时候,要用\\代表\本身,但\s有特殊含义,所以要用\\\\把\\无意义化,就很麻烦,难懂.
+              2. 针对以上问题,我们采用了r来表示原始字符,写成r'\\store'
+          iv. 实现匹配
+              1. 模式对象p生成后,最主要使用以下方法:
+                  a. match() --> 匹配,并只从第一个词开始,如果匹配上了就返回匹配对象
+                  b. search() --> 从查找对象中遍历,如果匹配上了返回第一个匹配对象
+                  c. findall() --> 找出所有符合条件的值,并装在一个列表里返回
+                  d. finditer() --> 找出所有符合条件的值并装在迭代器里返回
+              2. 匹配对象的几大方法 --> match()和search()
+                  a. group() --> 返回匹配到的字符串
+                  b. start() --> 返回匹配到的开始位置(match()若匹配到,则这值永远是0)
+                  c. end() --> 返回匹配到的结束位置
+                  d. span() --> 返回匹配到的开始和结束位置的元组
+      c. 模块级别的函数
+          i. 模块级别函数说明
+              1. 先编译再匹配等价于直接一次性匹配,如 p = re.compile('[abc]+') p.match('amazon') --> re.match('[abc]+','amazon')
+              2. 适用条件 --> 因为预编译可以节省一部分效率
+                  a. 当在一个循环内部多次使用正则表达式时 --> 先用re.compile编译
+                  b. 当只使用一次或少数次数时 --> 一次性编译
+                  c. 当在循环外面引用时 --> 都一样
+          ii. 编译标志 --> 可以改变正则表达式的一些工作方式
+              1. 使用示例re.compile([a-z]+,re.IGNORECASE)
+              2. 常用编译标志
+                  a. ASCII,A --> 让正则表达式只适用于ascii字符,这个模式只对unicode模式有意义,目前还没用过unicode模式.
+                  b. DOTALL,S --> 让.匹配所有字符,包括\n,如.可以代表\n,换行符
+                  c. IGNORECASE,I --> 忽略大小写的匹配,如FishC可以匹配fishc等
+                  d. LOCAL,L --> 启用本地,不常用
+                  e. MULTILINE,M --> 多行匹配,影响^和%,让它们不仅可以匹配段首,还可以匹配行首.
+                  f. VERBOSE,X --> 启用详细的正则表达式,目前还没用过.使用VERBOSE后,空格将会被忽略.
+      d. 更多强大的功能
+          i. 更多元字符
+              1. | --> 或优先级很低,A|B代表匹配A的正则或B的正则,可以使用\|或[|]字符类来匹配字符本身.
+              2. ^ --> 匹配字符串首的字符,如果设置re.M则匹配字符串每行的字符,\A也匹配字符串首字符,但re.M对\A不起作用.
+              3. $ --> 匹配字符串末尾的字符,如果设置re.MULTILE则匹配字符串每行末尾的字符,\Z也匹配字符串末尾的字符,但是设置re.M的时候对\Z无影响
+              4. \b -->零宽断言,左右两边不能同时是\w字符.用网上的话说就是:它的前面的显式位置和后面的显式位置不能同时是\w
+                  a. 注意 --> \b在python中表示退格符(ASCII码==8),所以需要再次强调正则表达式的前面要加原始字符串标志r
+                  b. [\b]表示的也是退格符
+                  c. []称之为字符类
+              5. \B和\b相反,表示非字符边界,即前面和后面必须全是\w
+          ii. 分组 --> ()
+              1. 正则表达式中用()表示分组,可以用+?*{m,n}表示重复.
+              2. 得到索引结果后,如s = re.search('(a(b)c)','abc'),s内部就有了索引值,其中0代表整个分组(默认为0),1代表第一个小分组,以此类推,分组的索引从1开始,以左括号作为排列前后的依据.可以用group(),start(),end(),span()传入索引返回相应分组的属性.如s.group(1) --> 'abc',s.group(2) --> b
+              3. group()可以一次性传入多个子组的序号,如group(2,1,2) -->('b','abc','b')
+              4. groups()方法,可以一次性返回所有子组.注意是子组,子组是group(1)以及之后的组,外括号里有多少对括号,就有多少个括号个子组.
+              5. 反向引用的概念 --> 可以在分组后面用\数字来引用前面的分组内容,如p = re.compile('(abc)+\1'),一般用在字符串的替换里,文本格式比较少出现这样的字符串.
+      e. 非捕获组和命名组
+          i. 为什么有非捕获组和命名组
+              1. 子组非常有用,所以在正则表达式中人们经常使用它们,使用多了之后,就有区分开它们的欲望,并且把经常使用到的功能模块化,所以诞生了非捕获组和命名组.可以看出,这两种类型是子组里面常出现的类型.
+          ii. 正则表达式扩展语法
+              1. 正则表达式以perl5为标准.
+              2. 正则表达式有把高频使用的语法模块化的需求,需要perl5出新语法.
+              3. 后面决定用(?...)作为新的正则语法,如(?:foo)或者(?=foo)或(?P<name>foo)等.
+          iii. 非捕获组
+              1. 正则里捕获就是匹配,非捕获组意思的不匹配的子组.语法是(?:foo),注意,非捕获组里的组都是子组.
+              2. 非捕获组除了不能捕获以外,包括序号等等都和其他子组一样.
+          iv. 命名组
+              1. 意义:一般使用序号去访问子组,但由于有些正则表达式有特殊的模块化意义,我们采用命名组来标记这部分正则代码,命名组也可以用序号访问.
+              2. 使用:re.compile('(?P<word>\b\w+\s)')
+              3. 复用:和正则里的\1类似,重复引用前面的命名组的方法是(?P=name)如re.compile('(?P<worf>\b\w+\s)+(?P=word)')
+      f. 前向断言
+          i. 为什么要有前向断言
+              1. 我们在判断正则的时候,有时候要面对某个地方'必须是'或'必须不是'某个字符结构的时候,那就需要前向肯定断言来匹配必须是的部分,如果不是则中断,前向否定断言匹配'必须不是'的部分,如果是,则中断匹配.
+          ii. 前向肯定断言
+              1. 表达式 --> (?=foo)
+              2. 例子 --> 如果是文件名匹配.如hi.txt,某次后缀必须匹配.bat,用肯定前向断言可以大大提高可读性和降低学习难度,写成.*[.](?=bat$),$保证是bat而不是batch等
+          iii. 前向否定断言
+              1. 表达式 --> (?!foo)
+              2. 例子 --> 如果后缀不能匹配.bat,则写成.*[.](?!bat$),$保证不是bat,不会误伤batch.
+      g. 修改字符串
+          i. 什么是修改字符串 --> 正则表达式做三个事:查找,捕获(匹配),替换,修改字符串为替换/
+              1. 修改字符串的三个方法:
+                  a. p.split(string[,maxsplit=0(整数,0表示都分割)])
+                  b. p.sub(replacement,string[,count=0](表示替换次数,=0时完全替换))
+                  c. p.subn(replacement,string[,count=0])
+          ii. 分割字符串
+              1. p.split(string[,maxsplit=0])
+                  a. 解释:比普通的split有更强的分隔符灵活性,因为这里的分隔符是正则,可以代表一个类的分隔符.maxsplit代表分割次数;返回的值装在字符串里.
+                      i. 例子 --> p = re.compile(r'\W+'),p.split('wow it is cool!',maxsplit = 2(或直接写2))
+                  b. 你也可以返回被正则分割的字符串和正则代表的分隔符一起返回,方法是编译的时候把正则放进捕获组
+                      i. 例子 --> p.compile(('\W+')),,p.split('wow it is cool!',2) -->返回所有
+                  c. 模块级别的re.split(),除了最前面的参数加正则以外其他和.split一样,其实就是把编译省去了.
+              2. 搜索和替换
+                  a. p.sub(replacement,string[count=0]),替换后返回替换后的字符串
+                      i. 参数解释:
+                          1. replacement是替换后的对象,可以是字符串或接收前面被替换对象的函数.
+                          2. string是待替换字符串,遇到符合正则的字符就替换,否则显示元字符
+                          3. count默认为0,这时候替换所有符合正则的对象,可以用count设置替换次数.
+                  b. p.subn()
+                      i. 方法解释:和sub一样,不同的是返回值是一个包含两个元素的tuple,第一个元素是替换后的字符串,第二个元素是替换的次数.
+                  c. replacement扩展知识
+                      i. 反斜杠 --> 如果replacement是字符串,那么它里面的\会被处理,如\n变换行,\r变回车.
+                      ii. 反向引用 --> 如果replacement里有反向引用\1等,则会引用正则里的元祖,再把待替换字符串里的string的相应位置的捕获组放到替换后的结果中.相当于引用了原字符串里的内容.
+                      iii. 命名组 --> 可以在replacement里引用命名组,如编译正则里有p = re.compile(r'(?P<yufan>[\w]+)'),replacement里可以用p.search(r'?g<yufan>')引用
+                          1. \g<1>等价于\1,建议用\g<1>的模式,如r'\g<1>0'代表引用第一组后面加一个0,但是r'\10'就是引用第十组了,麻烦.
+                      iv. replacement还可以是函数
+                  d. 使用re.sub的时候正则表达式或编译好的对象都可以作为第一个参数.
+      h. 常见问题
+          i. 使用字符串方法
+              1. 解释:某些时候,并不需要一定使用正则来进行字符串操作,可以直接使用字符串自带的方法就用.如replace()能办到的就不要用sub,因为字符串自带方法效率高一些.
+              2. 在使用re模块前.先考虑字符串自带方法能不能解决.
+          ii. match() Vs search()
+              1. match只能从字符串最开始匹配,search会遍历字符串找到匹配的地方.
+              2. 不要耍小聪明,在match的正则表达式前面加.*以期达到search的效果.因为re引擎会从正则的第一个开始分析,如果正则是hello,则从h开始找,找到后开始后面的匹配,如果.*正则,则.会匹配所有的字符,无疑降低了效率.
+              3. 贪婪和非贪婪
+                  a. 不做要求下,正则表达式的贪婪的,会匹配到最后,再往前找到倒数第一个符号要求的字符串,这一般和我们的预期不一样.
+                  b. 非贪婪的方法很简单,在限定词,如*+?{m,n}后面加一个问号?,就可以让?后面的字符再前面匹配到以后,立即尝试匹配,也就是说,前面在匹配的同时,也在查找?后面的字符,一旦找到,就返回结果.
+              4. 使用re.VERBOSE或re.X
+                  a. 在元字符r后面加''',以多行写入
+                  b. #后面可以加注释
