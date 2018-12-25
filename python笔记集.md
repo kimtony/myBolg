@@ -5,6 +5,7 @@
 [%r和%s的区别](https://www.jb51.net/article/108589.htm)<br>
 [正则表达式分析网页](https://blog.csdn.net/eastmount/article/details/51082253)<br>
 [python闭包](https://www.cnblogs.com/Lin-Yi/p/7305364.html)<br>
+[list、tuple、dict、](http://www.cnblogs.com/soaringEveryday/p/5044007.html)<br>
 小甲鱼<br>
 [1、爬虫文档](https://fishc.com.cn/thread-117513-1-1.html)<br>
 
